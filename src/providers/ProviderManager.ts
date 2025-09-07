@@ -5,8 +5,14 @@ import { AnthropicProvider } from "./AnthropicProvider";
 
 export type ProviderType = 'openai' | 'groq' | 'anthropic';
 export type ModelType = 
-    // OpenAI models
-    | 'gpt-4o' | 'gpt-4o-mini' | 'gpt-4-turbo' | 'gpt-3.5-turbo'
+    // OpenAI GPT-5 series (Latest Flagship Models - Requires Verification)
+    | 'gpt-5' | 'gpt-5-mini' | 'gpt-5-nano'
+    // OpenAI GPT-4o series (Available)
+    | 'gpt-4o' | 'gpt-4o-mini'
+    // OpenAI GPT-3.5 (Available)
+    | 'gpt-3.5-turbo' | 'gpt-3.5-turbo-0125' | 'gpt-3.5-turbo-1106'
+    // OpenAI o1 series (reasoning models - May require verification)
+    | 'o1-preview' | 'o1-mini'
     // Groq models (Production - Currently Available)
     | 'llama-3.1-8b-instant' | 'llama-3.3-70b-versatile'
     | 'openai/gpt-oss-120b' | 'openai/gpt-oss-20b'

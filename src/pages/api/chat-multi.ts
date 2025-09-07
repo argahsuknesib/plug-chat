@@ -8,16 +8,27 @@ const providerManager = new ProviderManager();
 // Add providers based on available environment variables
 function initializeProviders() {
     const providers: Array<{name: string, provider: ProviderType, model: ModelType}> = [
-        // OpenAI models
-        { name: "gpt-4o", provider: "openai", model: "gpt-4o" },
-        { name: "gpt-4o-mini", provider: "openai", model: "gpt-4o-mini" },
-        { name: "gpt-4-turbo", provider: "openai", model: "gpt-4-turbo" },
-        
-        // Groq models (Production - Currently Available)
+        // Groq models (Production - Full Native Streaming Support)
         { name: "llama-8b", provider: "groq", model: "llama-3.1-8b-instant" },
         { name: "llama-70b", provider: "groq", model: "llama-3.3-70b-versatile" },
         { name: "gpt-oss-120b", provider: "groq", model: "openai/gpt-oss-120b" },
         { name: "gpt-oss-20b", provider: "groq", model: "openai/gpt-oss-20b" },
+        
+        // OpenAI GPT-5 Series (Latest - SSE Streaming Fallback)
+        { name: "gpt-5", provider: "openai", model: "gpt-5" },
+        { name: "gpt-5-mini", provider: "openai", model: "gpt-5-mini" },
+        { name: "gpt-5-nano", provider: "openai", model: "gpt-5-nano" },
+        
+        // OpenAI GPT-4o Series (Full Native Streaming)
+        { name: "gpt-4o", provider: "openai", model: "gpt-4o" },
+        { name: "gpt-4o-mini", provider: "openai", model: "gpt-4o-mini" },
+        
+        // OpenAI GPT-3.5 Series (Full Native Streaming)
+        { name: "gpt-3.5-turbo", provider: "openai", model: "gpt-3.5-turbo" },
+        
+        // OpenAI o1 Series (Advanced Reasoning)
+        { name: "o1-preview", provider: "openai", model: "o1-preview" },
+        { name: "o1-mini", provider: "openai", model: "o1-mini" },
         
         // Anthropic models
         { name: "claude-sonnet", provider: "anthropic", model: "claude-3-5-sonnet-20241022" },

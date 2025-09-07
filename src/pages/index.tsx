@@ -3,6 +3,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneLight } from 'react-syntax-highlighter/dist/cjs/styles/prism';
+import ChatHistory from '../components/ChatHistory';
 
 interface Message {
     role: "user" | "assistant";
@@ -10,12 +11,31 @@ interface Message {
 }
 
 const AVAILABLE_MODELS = [
-    { id: "llama-8b", name: "Llama 3.1 8B (Fast & Free)", provider: "Groq" },
-    { id: "llama-70b", name: "Llama 3.3 70B (Powerful)", provider: "Groq" },
+    // Groq Models (Fast & Free - Full Streaming Support)
+    { id: "llama-8b", name: "🚀 Llama 3.1 8B (Fast & Free)", provider: "Groq" },
+    { id: "llama-70b", name: "🔥 Llama 3.3 70B (Powerful)", provider: "Groq" },
+    
+    // OpenAI GPT-5 Series (Latest - SSE Streaming)
+    { id: "gpt-5", name: "⭐ GPT-5 (Flagship - Best for Coding & Agents)", provider: "OpenAI" },
+    { id: "gpt-5-mini", name: "⭐ GPT-5 Mini (Faster & Cheaper)", provider: "OpenAI" },
+    { id: "gpt-5-nano", name: "⭐ GPT-5 Nano (Fastest - Summarization)", provider: "OpenAI" },
+    
+    // OpenAI GPT-4o Series (Full Streaming Support)
+    { id: "gpt-4o", name: "GPT-4o (Latest Available)", provider: "OpenAI" },
+    { id: "gpt-4o-mini", name: "GPT-4o Mini (Fast & Cheap)", provider: "OpenAI" },
+    
+    // OpenAI GPT-3.5 Series (Full Streaming Support)
+    { id: "gpt-3.5-turbo", name: "GPT-3.5 Turbo (Reliable)", provider: "OpenAI" },
+    
+    // OpenAI o1 Series (Advanced Reasoning)
+    { id: "o1-preview", name: "🧠 GPT-o1 Preview (Advanced Reasoning)", provider: "OpenAI" },
+    { id: "o1-mini", name: "🧠 GPT-o1 Mini (Fast Reasoning)", provider: "OpenAI" },
+    
+    // Groq Additional Models
     { id: "gpt-oss-120b", name: "GPT-OSS 120B (OpenAI on Groq)", provider: "Groq" },
     { id: "gpt-oss-20b", name: "GPT-OSS 20B (OpenAI on Groq)", provider: "Groq" },
-    { id: "gpt-4o-mini", name: "GPT-4o Mini", provider: "OpenAI" },
-    { id: "gpt-4o", name: "GPT-4o", provider: "OpenAI" },
+    
+    // Anthropic Claude
     { id: "claude-haiku", name: "Claude 3 Haiku", provider: "Anthropic" },
     { id: "claude-sonnet", name: "Claude 3.5 Sonnet", provider: "Anthropic" },
 ];
@@ -25,18 +45,102 @@ export default function Home() {
     const [input, setInput] = useState("");
     const [loading, setLoading] = useState(false);
     const [selectedModel, setSelectedModel] = useState("llama-8b");
+    const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+    const [conversationTitle, setConversationTitle] = useState<string>("");
+
+    // Generate conversation title from first message
+    const generateTitle = (message: string): string => {
+        const words = message.trim().split(' ');
+        if (words.length <= 6) {
+            return message;
+        }
+        return words.slice(0, 6).join(' ') + '...';
+    };
+
+    // Create new conversation
+    const createNewConversation = async (firstMessage: string, model: string): Promise<string | null> => {
+        const selectedModelInfo = AVAILABLE_MODELS.find(m => m.id === model);
+        const title = generateTitle(firstMessage);
+        
+        try {
+            const response = await fetch('/api/conversations', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title,
+                    model,
+                    provider: selectedModelInfo?.provider || 'Unknown'
+                })
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                return data.conversation.id;
+            }
+        } catch (error) {
+            console.error('Failed to create conversation:', error);
+        }
+        return null;
+    };
+
+    // Load conversation messages
+    const loadConversation = async (conversationId: string) => {
+        try {
+            const response = await fetch(`/api/conversations/${conversationId}`);
+            const data = await response.json();
+            
+            if (response.ok) {
+                const { conversation, messages: dbMessages } = data;
+                setCurrentConversationId(conversationId);
+                setConversationTitle(conversation.title);
+                setSelectedModel(conversation.model);
+                
+                // Convert database messages to our format
+                const chatMessages: Message[] = dbMessages
+                    .filter((msg: { role: string }) => msg.role !== 'system')
+                    .map((msg: { role: string; content: string }) => ({
+                        role: msg.role as "user" | "assistant",
+                        content: msg.content
+                    }));
+                
+                setMessages(chatMessages);
+            }
+        } catch (error) {
+            console.error('Failed to load conversation:', error);
+        }
+    };
+
+    // Start new chat
+    const startNewChat = () => {
+        setMessages([]);
+        setInput("");
+        setCurrentConversationId(null);
+        setConversationTitle("");
+    };
 
     const sendMessage = async () => {
         if (!input.trim()) return;
 
-        const newMessages = [...messages, {
+        const userMessage = {
             role: "user" as const,
             content: input
-        }];
+        };
 
+        const newMessages = [...messages, userMessage];
         setMessages(newMessages);
+        const currentInput = input;
         setInput("");
         setLoading(true);
+
+        // Create conversation if this is the first message
+        let conversationId = currentConversationId;
+        if (!conversationId && newMessages.length === 1) {
+            conversationId = await createNewConversation(currentInput, selectedModel);
+            if (conversationId) {
+                setCurrentConversationId(conversationId);
+                setConversationTitle(generateTitle(currentInput));
+            }
+        }
 
         // Add an empty assistant message that we'll fill with streaming content
         const assistantMessage = {
@@ -55,7 +159,8 @@ export default function Home() {
                 },
                 body: JSON.stringify({ 
                     messages: newMessages,
-                    model: selectedModel
+                    model: selectedModel,
+                    conversationId: conversationId
                 })
             });
 
@@ -114,7 +219,7 @@ export default function Home() {
                                 setLoading(false);
                                 return;
                             }
-                        } catch (parseError) {
+                        } catch {
                             console.warn('Failed to parse SSE data:', line);
                             // Skip invalid JSON lines
                             continue;
@@ -134,16 +239,51 @@ export default function Home() {
     }
 
     return (
-        <div style={{ 
-            padding: "20px", 
-            maxWidth: "800px", 
-            margin: "0 auto",
-            fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif"
-        }}>
-            <h1 style={{ 
-                fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif",
-                fontWeight: "500"
-            }}>Plug Chat</h1>
+        <div style={{ display: "flex", height: "100vh" }}>
+            {/* Chat History Sidebar */}
+            <ChatHistory 
+                onConversationSelect={loadConversation}
+                onNewChat={startNewChat}
+                currentConversationId={currentConversationId}
+            />
+            
+            {/* Main Chat Area */}
+            <div style={{ 
+                flex: 1,
+                padding: "20px", 
+                maxWidth: "800px", 
+                margin: "0 auto",
+                fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif",
+                display: "flex",
+                flexDirection: "column"
+            }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
+                    <h1 style={{ 
+                        fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif",
+                        fontWeight: "500",
+                        margin: "0"
+                    }}>
+                        {conversationTitle || "Plug Chat"}
+                    </h1>
+                    
+                    {currentConversationId && (
+                        <button
+                            onClick={startNewChat}
+                            style={{
+                                padding: "8px 16px",
+                                backgroundColor: "#007AFF",
+                                color: "white",
+                                border: "none",
+                                borderRadius: "6px",
+                                fontSize: "14px",
+                                cursor: "pointer",
+                                fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif"
+                            }}
+                        >
+                            New Chat
+                        </button>
+                    )}
+                </div>
             
             <div style={{ 
                 marginBottom: "15px",
@@ -393,6 +533,8 @@ export default function Home() {
                 >
                     {loading ? "Sending..." : "Send"}
                 </button>
+            </div>
+            
             </div>
         </div>
     );

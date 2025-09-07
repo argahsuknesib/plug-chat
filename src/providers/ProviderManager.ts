@@ -29,9 +29,7 @@ export class ProviderManager {
 
         switch (config.provider) {
             case 'openai':
-                provider = new OpenAIProvider(config.apiKey);
-                // Update the model in OpenAI provider
-                (provider as any).model = config.model;
+                provider = new OpenAIProvider(config.apiKey, config.model);
                 break;
             
             case 'groq':

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -176,9 +176,9 @@ export default function Home() {
                                 <ReactMarkdown 
                                     remarkPlugins={[remarkGfm]}
                                     components={{
-                                        code: ({node, className, children, ...props}: any) => {
+                                        code: (props) => {
+                                            const { className, children, ...rest } = props;
                                             const inline = !className?.includes('language-');
-                                            const match = /language-(\w+)/.exec(className || '');
                                             return !inline ? (
                                                 <pre style={{
                                                     backgroundColor: "#f6f8fa",
@@ -191,7 +191,7 @@ export default function Home() {
                                                     fontSize: "13px",
                                                     lineHeight: "1.4"
                                                 }}>
-                                                    <code className={className} {...props}>
+                                                    <code className={className} {...rest}>
                                                         {children}
                                                     </code>
                                                 </pre>
@@ -203,7 +203,7 @@ export default function Home() {
                                                     fontFamily: "'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace",
                                                     fontSize: "12px",
                                                     border: "1px solid #d1d9e0"
-                                                }} {...props}>
+                                                }} {...rest}>
                                                     {children}
                                                 </code>
                                             );

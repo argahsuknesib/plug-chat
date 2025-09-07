@@ -1,36 +1,80 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Plug Chat 
 
-## Getting Started
+A multi-provider AI chat application built with Next.js and TypeScript. Chat with multiple AI models including OpenAI GPT, Groq (Llama), and Anthropic Claude - all in one interface!
 
-First, run the development server:
+## Features
 
+- **🤖 Multi-Provider Support**: OpenAI, Groq, and Anthropic models
+- **💬 Markdown Support**: Rich text formatting, code blocks, and syntax highlighting
+- **🎨 Clean UI**: macOS-inspired design with beautiful typography
+- **🔄 Model Switching**: Switch between AI models mid-conversation
+- **🗄️ Database Integration**: PostgreSQL with vector search. 
+
+At the moment, only conversation history is stored and limited vector search is implemented with only 5 similar items to be fetched from the pgvector database. More features to be added soon!
+
+## Quick Start
+
+### 1. Clone the repository
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/argahsuknesib/plug-chat.git
+cd plug-chat
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Install dependencies
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 3. Set up environment variables
+Create a `.env.local` file in the root directory:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```env
+# Required: Get a free API key from https://console.groq.com
+GROQ_API_KEY=your_groq_api_key_here
 
-## Learn More
+# Optional: Add other providers
+OPENAI_API_KEY=your_openai_api_key_here
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
 
-To learn more about Next.js, take a look at the following resources:
+# Optional: Database (for conversation history)
+DATABASE_URL=your_postgresql_connection_string
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 4. Run the development server
+```bash
+npm run dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## Deploy on Vercel
+## 🔑 Getting API Keys
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Groq (Recommended - Free)
+1. Visit [console.groq.com](https://console.groq.com)
+2. Sign up for a free account
+3. Generate an API key
+4. Enjoy generous free tier limits!
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### OpenAI (Optional)
+1. Visit [platform.openai.com](https://platform.openai.com)
+2. Create an account and add billing
+3. Generate an API key
+
+### Anthropic (Optional)
+1. Visit [console.anthropic.com](https://console.anthropic.com)
+2. Sign up and get credits
+3. Generate an API key
+
+## 🔧 Development
+
+### Available Scripts
+```bash
+npm run dev          # Start development server
+npm run build        # Build for production
+npm run start        # Start production server
+npm run lint         # Run ESLint
+```
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

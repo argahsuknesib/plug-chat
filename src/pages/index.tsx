@@ -1,6 +1,8 @@
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { oneLight } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 
 interface Message {
     role: "user" | "assistant";
@@ -23,7 +25,6 @@ export default function Home() {
     const [input, setInput] = useState("");
     const [loading, setLoading] = useState(false);
     const [selectedModel, setSelectedModel] = useState("llama-8b");
-    const [currentProvider, setCurrentProvider] = useState("");
 
     const sendMessage = async () => {
         if (!input.trim()) return;
@@ -37,8 +38,17 @@ export default function Home() {
         setInput("");
         setLoading(true);
 
+        // Add an empty assistant message that we'll fill with streaming content
+        const assistantMessage = {
+            role: "assistant" as const,
+            content: ""
+        };
+        const messagesWithAssistant = [...newMessages, assistantMessage];
+        setMessages(messagesWithAssistant);
+
         try {
-            const response = await fetch("/api/chat-multi", {
+            console.log('Starting streaming request...');
+            const response = await fetch("/api/chat-stream", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
@@ -49,27 +59,74 @@ export default function Home() {
                 })
             });
 
-            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
 
-            if (data.reply) {
-                setMessages([...newMessages, {
-                    role: "assistant" as const,
-                    content: data.reply
-                }]);
-                setCurrentProvider(data.provider || "");
-            } else {
-                // Handle error
-                console.error("API Error:", data);
-                setMessages([...newMessages, {
-                    role: "assistant" as const,
-                    content: `Error: ${data.error || 'Unknown error occurred'}`
-                }]);
+            const reader = response.body?.getReader();
+            const decoder = new TextDecoder();
+
+            if (!reader) {
+                throw new Error('No reader available');
+            }
+
+            let accumulatedContent = "";
+
+            while (true) {
+                const { done, value } = await reader.read();
+                
+                if (done) {
+                    console.log('Stream completed');
+                    break;
+                }
+
+                const chunk = decoder.decode(value);
+                const lines = chunk.split('\n');
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const data = JSON.parse(line.slice(6));
+                            console.log('Received data:', data);
+                            
+                            if (data.error) {
+                                throw new Error(data.error);
+                            }
+                            
+                            if (data.content) {
+                                accumulatedContent += data.content;
+                                
+                                // Update the assistant message with the accumulated content
+                                setMessages(prevMessages => {
+                                    const updatedMessages = [...prevMessages];
+                                    if (updatedMessages.length > 0) {
+                                        updatedMessages[updatedMessages.length - 1] = {
+                                            role: "assistant" as const,
+                                            content: accumulatedContent
+                                        };
+                                    }
+                                    return updatedMessages;
+                                });
+                            }
+                            
+                            if (data.done) {
+                                console.log('Streaming done');
+                                setLoading(false);
+                                return;
+                            }
+                        } catch (parseError) {
+                            console.warn('Failed to parse SSE data:', line);
+                            // Skip invalid JSON lines
+                            continue;
+                        }
+                    }
+                }
             }
         } catch (error) {
-            console.error("Network Error:", error);
+            console.error("Streaming Error:", error);
             setMessages([...newMessages, {
                 role: "assistant" as const,
-                content: "Error: Failed to connect to the server"
+                content: `Error: ${error instanceof Error ? error.message : 'Failed to connect to the server'}`
             }]);
         } finally {
             setLoading(false);
@@ -125,16 +182,6 @@ export default function Home() {
                         </option>
                     ))}
                 </select>
-                {currentProvider && (
-                    <div style={{
-                        marginTop: "5px",
-                        fontSize: "12px",
-                        color: "#6c757d",
-                        fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif"
-                    }}>
-                        Currently using: {currentProvider}
-                    </div>
-                )}
             </div>
             
             <div style={{ 
@@ -178,29 +225,35 @@ export default function Home() {
                                     components={{
                                         code: (props) => {
                                             const { className, children, ...rest } = props;
+                                            const match = /language-(\w+)/.exec(className || '');
+                                            const language = match ? match[1] : '';
                                             const inline = !className?.includes('language-');
+                                            
                                             return !inline ? (
-                                                <pre style={{
-                                                    backgroundColor: "#f6f8fa",
-                                                    border: "1px solid #d1d9e0",
-                                                    borderRadius: "6px",
-                                                    padding: "12px",
-                                                    margin: "8px 0",
-                                                    overflowX: "auto",
-                                                    fontFamily: "'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace",
-                                                    fontSize: "13px",
-                                                    lineHeight: "1.4"
-                                                }}>
-                                                    <code className={className} {...rest}>
-                                                        {children}
-                                                    </code>
-                                                </pre>
+                                                <SyntaxHighlighter
+                                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                                    style={oneLight as any}
+                                                    language={language}
+                                                    PreTag="div"
+                                                    customStyle={{
+                                                        backgroundColor: "#f6f8fa",
+                                                        border: "1px solid #d1d9e0",
+                                                        borderRadius: "6px",
+                                                        padding: "12px",
+                                                        margin: "8px 0",
+                                                        fontSize: "13px",
+                                                        lineHeight: "1.4",
+                                                        fontFamily: "ui-monospace, 'SF Mono', 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace"
+                                                    }}
+                                                >
+                                                    {String(children).replace(/\n$/, '')}
+                                                </SyntaxHighlighter>
                                             ) : (
                                                 <code style={{
                                                     backgroundColor: "#f6f8fa",
                                                     padding: "2px 4px",
                                                     borderRadius: "3px",
-                                                    fontFamily: "'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace",
+                                                    fontFamily: "ui-monospace, 'SF Mono', 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace",
                                                     fontSize: "12px",
                                                     border: "1px solid #d1d9e0"
                                                 }} {...rest}>

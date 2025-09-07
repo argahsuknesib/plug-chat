@@ -28,4 +28,27 @@ export class AnthropicProvider implements ChatProvider {
 
         return response.content[0].type === 'text' ? response.content[0].text : "";
     }
+
+    async* sendMessageStream(messages: ChatMessage[]): AsyncIterable<string> {
+        // Anthropic requires system messages to be separate
+        const systemMessage = messages.find(msg => msg.role === 'system');
+        const conversationMessages = messages.filter(msg => msg.role !== 'system');
+
+        const stream = await this.client.messages.create({
+            model: this.model,
+            max_tokens: 1024,
+            system: systemMessage?.content || "You are a helpful assistant.",
+            messages: conversationMessages.map(msg => ({
+                role: msg.role as "user" | "assistant",
+                content: msg.content
+            })),
+            stream: true
+        });
+
+        for await (const chunk of stream) {
+            if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
+                yield chunk.delta.text;
+            }
+        }
+    }
 }

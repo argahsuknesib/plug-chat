@@ -2,6 +2,8 @@
 
 A multi-provider AI chat application to chat with multiple AI models including OpenAI GPT, Groq (Llama), and Anthropic Claude - all in one interface!
 
+![Plug Chat Screenshot](./image.png)
+
 ## Why did I make this?
 
 I think the billing model for LLMs are kind of weird right now. It is like a buffet, you pay for what you eat, but you don't know how much you will eat.
